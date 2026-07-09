@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NaviGo
 
-## Getting Started
+**A smarter, safer way to get home.**
 
-First, run the development server:
+NaviGo is a safety-first navigation web app for young people in London. It offers dual routing (fast vs safe), SOS safe spaces, live TfL data, and hazard reporting — all in a mobile-friendly PWA.
+
+## Features
+
+- **Adaptive Smart Routing** — Toggle fast or safe paths; auto safe mode at night
+- **SOS Safe Spaces** — Find nearby staffed TfL stations and libraries
+- **TfL Integration** — Live crowding and staffing data
+- **Hazard Reporting** — Report street hazards to local councils
+- **Off-path Alerts** — Get notified when you leave your planned route
+- **PWA** — Install on your phone from the browser
+
+## Quick Start
 
 ```bash
+cd navigo
+npm install
+cp .env.local.example .env.local
+# Add your Mapbox token to .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | Yes | Mapbox access token for maps and routing |
+| `NEXT_PUBLIC_SUPABASE_URL` | No | Supabase project URL (auth) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Supabase anon key |
+| `TFL_APP_ID` | No | TfL API app ID |
+| `TFL_APP_KEY` | No | TfL API app key |
 
-## Learn More
+## Deploy to Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. Push to GitHub repo `navigo`
+2. Import project in [Vercel](https://vercel.com) as project name `navigo`
+3. Add environment variables
+4. Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Next.js 16 + TypeScript
+- Tailwind CSS 4
+- Mapbox GL JS
+- TfL Unified API
+- Supabase (optional auth)
+- Vercel
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private — NaviGo © 2026

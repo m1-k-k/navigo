@@ -1,0 +1,18 @@
+{
+  "name": "NaviGo",
+  "short_name": "NaviGo",
+  "description": "Safety-first navigation for young people in London",
+  "start_url": "/navigate",
+  "display": "standalone",
+  "background_color": "#F5F0E8",
+  "theme_color": "#8BA888",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
