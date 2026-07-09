@@ -32,12 +32,12 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <Link href="/navigate">
-            <Button size="lg">Start navigating</Button>
+          <Link href="/navigate?demo=1">
+            <Button size="lg">Watch live demo</Button>
           </Link>
-          <Link href="/signup">
+          <Link href="/navigate">
             <Button variant="secondary" size="lg">
-              Create free account
+              Start navigating
             </Button>
           </Link>
         </div>

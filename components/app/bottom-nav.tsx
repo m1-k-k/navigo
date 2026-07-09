@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Map, Navigation, Shield, User } from "lucide-react";
+import { Map, Navigation, Shield, User, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/navigate", label: "Navigate", icon: Navigation },
   { href: "/map", label: "Map", icon: Map },
   { href: "/sos", label: "SOS", icon: Shield },
+  { href: "/report", label: "Report", icon: AlertTriangle },
   { href: "/profile", label: "Profile", icon: User },
 ];
 

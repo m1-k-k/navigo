@@ -1,29 +1,55 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { getTimeOfDayLabel, isNightTime } from "@/lib/routing/time-of-day";
+import {
+  DEMO_DESTINATION,
+  DEMO_ORIGIN,
+  effectiveIsNightTime,
+  isDemoMode,
+} from "@/lib/demo";
 import type { RouteMode } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { Moon, Sun, Zap, Shield } from "lucide-react";
 
+interface RouteComparison {
+  fast: { duration: number; safetyScore: number; litStreetPercent: number };
+  safe: { duration: number; safetyScore: number; litStreetPercent: number };
+  selectedMode: RouteMode;
+}
+
 export default function NavigatePage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-navy/50">Loading...</div>}>
+      <NavigatePageContent />
+    </Suspense>
+  );
+}
+
+function NavigatePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const demo = isDemoMode(searchParams);
+
+  const night = effectiveIsNightTime(isNightTime(), demo);
+
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
-  const [mode, setMode] = useState<RouteMode>(isNightTime() ? "safe" : "safe");
+  const [mode, setMode] = useState<RouteMode>("safe");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    duration: number;
-    safetyScore: number;
-    litStreetPercent: number;
-    label: string;
-    isNight: boolean;
-  } | null>(null);
+  const [comparison, setComparison] = useState<RouteComparison | null>(null);
+
+  useEffect(() => {
+    if (demo) {
+      setOrigin(DEMO_ORIGIN);
+      setDestination(DEMO_DESTINATION);
+    }
+  }, [demo]);
 
   async function geocode(query: string): Promise<[number, number] | null> {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -40,7 +66,7 @@ export default function NavigatePage() {
   async function handlePlanRoute() {
     setLoading(true);
     setError(null);
-    setResult(null);
+    setComparison(null);
 
     try {
       const originCoords = await geocode(origin);
@@ -55,7 +81,7 @@ export default function NavigatePage() {
       const destStr = `${destCoords[0]},${destCoords[1]}`;
 
       const res = await fetch(
-        `/api/route?origin=${originStr}&destination=${destStr}&mode=${mode}`
+        `/api/route?origin=${originStr}&destination=${destStr}&mode=${mode}${demo ? "&demo=1" : ""}`
       );
       const data = await res.json();
 
@@ -64,13 +90,20 @@ export default function NavigatePage() {
         return;
       }
 
-      setResult({
-        duration: data.route.duration,
-        safetyScore: data.route.safetyScore,
-        litStreetPercent: data.route.litStreetPercent,
-        label: data.route.label,
-        isNight: data.isNight,
-      });
+      const comparisonData: RouteComparison = {
+        fast: {
+          duration: data.alternatives.fast.duration,
+          safetyScore: data.alternatives.fast.safetyScore,
+          litStreetPercent: data.alternatives.fast.litStreetPercent,
+        },
+        safe: {
+          duration: data.alternatives.safe.duration,
+          safetyScore: data.alternatives.safe.safetyScore,
+          litStreetPercent: data.alternatives.safe.litStreetPercent,
+        },
+        selectedMode: data.mode,
+      };
+      setComparison(comparisonData);
 
       sessionStorage.setItem(
         "navigo-route",
@@ -80,10 +113,11 @@ export default function NavigatePage() {
           route: data.route,
           alternatives: data.alternatives,
           mode: data.mode,
+          demo,
         })
       );
 
-      router.push("/map");
+      setTimeout(() => router.push(demo ? "/map?demo=1" : "/map"), 1200);
     } catch {
       setError("Something went wrong. Check your Mapbox token.");
     } finally {
@@ -91,17 +125,29 @@ export default function NavigatePage() {
     }
   }
 
+  const safetyGain =
+    comparison && comparison.fast.safetyScore > 0
+      ? comparison.safe.safetyScore - comparison.fast.safetyScore
+      : 0;
+
   return (
     <div className="mx-auto max-w-lg p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-navy">Plan your route</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-navy">Plan your route</h1>
+          {demo && (
+            <span className="rounded-full bg-coral/10 px-3 py-1 text-xs font-semibold text-coral">
+              Demo mode
+            </span>
+          )}
+        </div>
         <p className="mt-1 flex items-center gap-2 text-sm text-navy/60">
-          {isNightTime() ? (
+          {night ? (
             <Moon className="h-4 w-4 text-sage" />
           ) : (
             <Sun className="h-4 w-4 text-coral" />
           )}
-          {getTimeOfDayLabel()}
+          {demo ? "Day — Choose your route (demo)" : getTimeOfDayLabel()}
         </p>
       </div>
 
@@ -129,12 +175,12 @@ export default function NavigatePage() {
             <button
               type="button"
               onClick={() => setMode("fast")}
-              disabled={isNightTime()}
+              disabled={night}
               className={`flex items-center gap-2 rounded-xl border-2 p-4 transition-all ${
                 mode === "fast"
                   ? "border-coral bg-coral/10"
                   : "border-navy/10 hover:border-navy/20"
-              } ${isNightTime() ? "opacity-50" : ""}`}
+              } ${night ? "opacity-50" : ""}`}
             >
               <Zap className="h-5 w-5 text-coral" />
               <div className="text-left">
@@ -158,7 +204,7 @@ export default function NavigatePage() {
               </div>
             </button>
           </div>
-          {isNightTime() && (
+          {night && !demo && (
             <p className="mt-2 text-xs text-sage">
               Night mode active — safe routing enforced
             </p>
@@ -181,14 +227,34 @@ export default function NavigatePage() {
         </Button>
       </Card>
 
-      {result && (
-        <Card className="mt-4">
-          <p className="font-semibold text-navy">{result.label}</p>
-          <div className="mt-2 flex gap-4 text-sm text-navy/70">
-            <span>{formatDuration(result.duration)}</span>
-            <span>Safety: {result.safetyScore}%</span>
-            <span>Lit streets: {result.litStreetPercent}%</span>
+      {comparison && (
+        <Card className="mt-4 border-2 border-sage/20">
+          <p className="text-sm font-medium text-navy/60">Route comparison</p>
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <div className="rounded-xl bg-coral/10 p-3">
+              <p className="text-xs font-semibold uppercase text-coral">Fast</p>
+              <p className="mt-1 text-lg font-bold text-navy">
+                {formatDuration(comparison.fast.duration)}
+              </p>
+              <p className="text-xs text-navy/60">
+                Safety {comparison.fast.safetyScore}%
+              </p>
+            </div>
+            <div className="rounded-xl bg-sage/10 p-3">
+              <p className="text-xs font-semibold uppercase text-sage">Safe</p>
+              <p className="mt-1 text-lg font-bold text-navy">
+                {formatDuration(comparison.safe.duration)}
+              </p>
+              <p className="text-xs text-navy/60">
+                Safety {comparison.safe.safetyScore}% · Lit {comparison.safe.litStreetPercent}%
+              </p>
+            </div>
           </div>
+          {safetyGain > 0 && (
+            <p className="mt-3 text-center text-sm font-medium text-sage">
+              Safe route is +{safetyGain}% safer — opening map...
+            </p>
+          )}
         </Card>
       )}
     </div>

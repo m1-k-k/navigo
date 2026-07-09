@@ -15,8 +15,11 @@ export function Navbar() {
           <a href="#problems" className="text-sm text-navy/70 hover:text-navy">
             Why
           </a>
-          <a href="#pricing" className="text-sm text-navy/70 hover:text-navy">
-            Pricing
+          <a href="#team" className="text-sm text-navy/70 hover:text-navy">
+            Team
+          </a>
+          <a href="#ask" className="text-sm text-navy/70 hover:text-navy">
+            The Ask
           </a>
         </nav>
 
@@ -28,10 +31,10 @@ export function Navbar() {
             Log in
           </Link>
           <Link
-            href="/navigate"
+            href="/navigate?demo=1"
             className="rounded-full bg-coral px-4 py-2 text-sm font-semibold text-white hover:bg-coral/90"
           >
-            Open app
+            Live demo
           </Link>
         </div>
       </div>

@@ -43,6 +43,15 @@ export default function ReportPage() {
     });
 
     if (res.ok) {
+      const data = await res.json();
+      const existing = JSON.parse(
+        localStorage.getItem(data.storageKey || "navigo-hazard-reports") || "[]"
+      );
+      existing.push(data.report);
+      localStorage.setItem(
+        data.storageKey || "navigo-hazard-reports",
+        JSON.stringify(existing)
+      );
       setSuccess(true);
       setDescription("");
     }

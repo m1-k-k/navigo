@@ -15,9 +15,9 @@ const features = [
   },
   {
     icon: Train,
-    title: "TfL Go Partnership",
+    title: "TfL Data Integration",
     description:
-      "Real-time crowding and staffing data from TfL. Report street hazards to local councils.",
+      "Live crowding data from TfL's public API. Report street hazards to help improve local streets.",
   },
   {
     icon: AlertTriangle,

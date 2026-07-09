@@ -5,11 +5,22 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { SafeSpace } from "@/lib/types";
 
+export interface RouteLayer {
+  id: string;
+  geometry: GeoJSON.LineString;
+  color: string;
+  width?: number;
+  opacity?: number;
+}
+
 interface MapViewProps {
   center?: [number, number];
   routeGeometry?: GeoJSON.LineString | null;
+  routes?: RouteLayer[];
+  highlightedRouteId?: string | null;
   safeSpaces?: SafeSpace[];
   showUserLocation?: boolean;
+  demoLocation?: { lat: number; lng: number } | null;
   onLocationUpdate?: (lat: number, lng: number) => void;
   className?: string;
 }
@@ -17,8 +28,11 @@ interface MapViewProps {
 export function MapView({
   center = [-0.1278, 51.5074],
   routeGeometry,
+  routes = [],
+  highlightedRouteId = null,
   safeSpaces = [],
   showUserLocation = false,
+  demoLocation = null,
   onLocationUpdate,
   className,
 }: MapViewProps) {
@@ -27,6 +41,13 @@ export function MapView({
   const [error, setError] = useState<string | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  const activeRoutes: RouteLayer[] =
+    routes.length > 0
+      ? routes
+      : routeGeometry
+        ? [{ id: "route", geometry: routeGeometry, color: "#8BA888", width: 5, opacity: 0.85 }]
+        : [];
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -56,42 +77,61 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !routeGeometry) return;
+    if (!map || activeRoutes.length === 0) return;
 
-    const addRoute = () => {
-      if (map.getSource("route")) {
-        (map.getSource("route") as mapboxgl.GeoJSONSource).setData({
-          type: "Feature",
+    const addRoutes = () => {
+      const allCoords: [number, number][] = [];
+
+      activeRoutes.forEach((route) => {
+        const sourceId = `route-${route.id}`;
+        const layerId = `route-layer-${route.id}`;
+        const isHighlighted = !highlightedRouteId || highlightedRouteId === route.id;
+        const opacity = isHighlighted ? (route.opacity ?? 0.9) : 0.35;
+        const width = isHighlighted ? (route.width ?? 6) : 4;
+
+        const feature = {
+          type: "Feature" as const,
           properties: {},
-          geometry: routeGeometry,
-        });
-      } else {
-        map.addSource("route", {
-          type: "geojson",
-          data: { type: "Feature", properties: {}, geometry: routeGeometry },
-        });
-        map.addLayer({
-          id: "route",
-          type: "line",
-          source: "route",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": "#8BA888", "line-width": 5, "line-opacity": 0.85 },
-        });
-      }
+          geometry: route.geometry,
+        };
 
-      const coords = routeGeometry.coordinates as [number, number][];
-      if (coords.length > 1) {
-        const bounds = coords.reduce(
+        if (map.getSource(sourceId)) {
+          (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(feature);
+        } else {
+          map.addSource(sourceId, { type: "geojson", data: feature });
+          map.addLayer({
+            id: layerId,
+            type: "line",
+            source: sourceId,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: {
+              "line-color": route.color,
+              "line-width": width,
+              "line-opacity": opacity,
+            },
+          });
+        }
+
+        if (map.getLayer(layerId)) {
+          map.setPaintProperty(layerId, "line-opacity", opacity);
+          map.setPaintProperty(layerId, "line-width", width);
+        }
+
+        allCoords.push(...(route.geometry.coordinates as [number, number][]));
+      });
+
+      if (allCoords.length > 1) {
+        const bounds = allCoords.reduce(
           (b, coord) => b.extend(coord),
-          new mapboxgl.LngLatBounds(coords[0], coords[0])
+          new mapboxgl.LngLatBounds(allCoords[0], allCoords[0])
         );
-        map.fitBounds(bounds, { padding: 60 });
+        map.fitBounds(bounds, { padding: 80 });
       }
     };
 
-    if (map.isStyleLoaded()) addRoute();
-    else map.on("load", addRoute);
-  }, [routeGeometry]);
+    if (map.isStyleLoaded()) addRoutes();
+    else map.on("load", addRoutes);
+  }, [activeRoutes, highlightedRouteId]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -123,55 +163,55 @@ export function MapView({
   useEffect(() => {
     if (!showUserLocation || !onLocationUpdate) return;
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        onLocationUpdate(latitude, longitude);
+    function updateUserMarker(lat: number, lng: number) {
+      onLocationUpdate?.(lat, lng);
+      const map = mapRef.current;
+      if (!map) return;
 
-        const map = mapRef.current;
-        if (map) {
-          if (!map.getSource("user")) {
-            map.addSource("user", {
-              type: "geojson",
-              data: {
-                type: "Feature",
-                properties: {},
-                geometry: { type: "Point", coordinates: [longitude, latitude] },
-              },
-            });
-            map.addLayer({
-              id: "user",
-              type: "circle",
-              source: "user",
-              paint: {
-                "circle-radius": 8,
-                "circle-color": "#4A90D9",
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#fff",
-              },
-            });
-          } else {
-            (map.getSource("user") as mapboxgl.GeoJSONSource).setData({
-              type: "Feature",
-              properties: {},
-              geometry: { type: "Point", coordinates: [longitude, latitude] },
-            });
-          }
-        }
-      },
+      const data = {
+        type: "Feature" as const,
+        properties: {},
+        geometry: { type: "Point" as const, coordinates: [lng, lat] },
+      };
+
+      if (!map.getSource("user")) {
+        map.addSource("user", { type: "geojson", data });
+        map.addLayer({
+          id: "user",
+          type: "circle",
+          source: "user",
+          paint: {
+            "circle-radius": 8,
+            "circle-color": "#4A90D9",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#fff",
+          },
+        });
+      } else {
+        (map.getSource("user") as mapboxgl.GeoJSONSource).setData(data);
+      }
+    }
+
+    if (demoLocation) {
+      updateUserMarker(demoLocation.lat, demoLocation.lng);
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => updateUserMarker(pos.coords.latitude, pos.coords.longitude),
       () => {},
       { enableHighAccuracy: true, maximumAge: 5000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [showUserLocation, onLocationUpdate]);
+  }, [showUserLocation, onLocationUpdate, demoLocation]);
 
   if (error) {
     return (
       <div className={`flex items-center justify-center bg-cream ${className}`}>
-        <div className="text-center p-8">
-          <p className="text-navy font-medium">{error}</p>
-          <p className="text-navy/60 text-sm mt-2">See .env.local.example for setup</p>
+        <div className="p-8 text-center">
+          <p className="font-medium text-navy">{error}</p>
+          <p className="mt-2 text-sm text-navy/60">See .env.local.example for setup</p>
         </div>
       </div>
     );

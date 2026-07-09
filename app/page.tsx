@@ -4,6 +4,7 @@ import { Problems } from "@/components/landing/problems";
 import { Features } from "@/components/landing/features";
 import { Competitors } from "@/components/landing/competitors";
 import { Timeline, Pricing } from "@/components/landing/timeline-pricing";
+import { Team, TheAsk } from "@/components/landing/team-ask";
 
 export default function Home() {
   return (
@@ -15,6 +16,8 @@ export default function Home() {
         <Features />
         <Competitors />
         <Timeline />
+        <Team />
+        <TheAsk />
         <Pricing />
       </main>
       <Footer />

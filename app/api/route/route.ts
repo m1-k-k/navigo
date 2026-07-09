@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { effectiveIsNightTime } from "@/lib/demo";
 import { pickBestRoute, scoreRoute } from "@/lib/routing/safety";
 import { isNightTime } from "@/lib/routing/time-of-day";
 import type { RouteMode } from "@/lib/types";
@@ -8,6 +9,7 @@ export async function GET(request: NextRequest) {
   const origin = searchParams.get("origin");
   const destination = searchParams.get("destination");
   const mode = (searchParams.get("mode") || "safe") as RouteMode;
+  const demo = searchParams.get("demo") === "1";
 
   if (!origin || !destination) {
     return NextResponse.json(
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const night = isNightTime();
+  const night = effectiveIsNightTime(isNightTime(), demo);
   const effectiveMode = night ? "safe" : mode;
 
   const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${origin};${destination}?alternatives=true&geometries=geojson&overview=full&steps=true&access_token=${token}`;

@@ -35,6 +35,14 @@ Open [http://localhost:3000](http://localhost:3000)
 | `TFL_APP_ID` | No | TfL API app ID |
 | `TFL_APP_KEY` | No | TfL API app key |
 
+## Dragon's Den Demo
+
+See [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 3-minute pitch script.
+
+**Quick demo URL:** `/navigate?demo=1` — pre-fills King's Cross → Camden, forces daytime routing.
+
+**Before pitching:** Add `NEXT_PUBLIC_MAPBOX_TOKEN` to [Vercel env vars](https://vercel.com/m1wav/navigo/settings/environment-variables) and redeploy. Without it, maps and routing will not work.
+
 ## Deploy to Vercel
 
 1. Push to GitHub repo `navigo`
