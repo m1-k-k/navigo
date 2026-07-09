@@ -19,17 +19,18 @@ NaviGo is a safety-first navigation web app for young people in London. It offer
 cd navigo
 npm install
 cp .env.local.example .env.local
-# Add your Mapbox token to .env.local
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
 
+No map API key needed — routing uses **OpenStreetMap** (maps) and **OSRM** (walking routes).
+
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | Yes | Mapbox access token for maps and routing |
+| `NEXT_PUBLIC_DEMO_MODE` | No | Always-on demo mode (`true` / `false`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | No | Supabase project URL (auth) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Supabase anon key |
 | `TFL_APP_ID` | No | TfL API app ID |
@@ -41,7 +42,7 @@ See [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 3-minute pitch script.
 
 **Quick demo URL:** `/navigate?demo=1` — pre-fills King's Cross → Camden, forces daytime routing.
 
-**Before pitching:** Add `NEXT_PUBLIC_MAPBOX_TOKEN` to [Vercel env vars](https://vercel.com/m1wav/navigo/settings/environment-variables) and redeploy. Without it, maps and routing will not work.
+**Before pitching:** Open `/navigate?demo=1` and confirm routes load. No API keys required.
 
 ## Deploy to Vercel
 
@@ -54,8 +55,9 @@ See [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 3-minute pitch script.
 
 - Next.js 16 + TypeScript
 - Tailwind CSS 4
-- Mapbox GL JS
-- TfL Unified API
+- Leaflet + OpenStreetMap (maps)
+- OSRM (walking routes)
+- Nominatim (address search)
 - Supabase (optional auth)
 - Vercel
 

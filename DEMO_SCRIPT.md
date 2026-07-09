@@ -2,9 +2,8 @@
 
 ## Before you go on stage
 
-1. Set `NEXT_PUBLIC_MAPBOX_TOKEN` on Vercel (required for maps)
-2. Optional: set `NEXT_PUBLIC_DEMO_MODE=true` on Vercel for always-on demo behaviour
-3. Bookmark these tabs:
+1. Optional: set `NEXT_PUBLIC_DEMO_MODE=true` on Vercel for always-on demo behaviour
+2. Bookmark these tabs:
    - `https://navigo-steel.vercel.app/` (Landing)
    - `https://navigo-steel.vercel.app/navigate?demo=1` (Navigate)
    - `https://navigo-steel.vercel.app/map` (Map — after planning route)
@@ -33,7 +32,7 @@
 
 ## Rehearsal checklist
 
-- [ ] Route plans successfully (Mapbox token set)
+- [ ] Route plans successfully (no API key needed)
 - [ ] Two routes visible on map (coral + sage)
 - [ ] SOS shows stations without geolocation prompt
 - [ ] Full run-through under 3 minutes

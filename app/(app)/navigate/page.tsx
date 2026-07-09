@@ -52,15 +52,10 @@ function NavigatePageContent() {
   }, [demo]);
 
   async function geocode(query: string): Promise<[number, number] | null> {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token) return null;
-
-    const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=gb&proximity=-0.1278,51.5074&limit=1`
-    );
+    const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return null;
     const data = await res.json();
-    if (!data.features?.[0]) return null;
-    return data.features[0].center as [number, number];
+    return [data.lng, data.lat];
   }
 
   async function handlePlanRoute() {
@@ -119,7 +114,7 @@ function NavigatePageContent() {
 
       setTimeout(() => router.push(demo ? "/map?demo=1" : "/map"), 1200);
     } catch {
-      setError("Something went wrong. Check your Mapbox token.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

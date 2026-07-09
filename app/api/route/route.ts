@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { effectiveIsNightTime } from "@/lib/demo";
+import { fetchWalkingRoutes } from "@/lib/osrm/client";
 import { pickBestRoute, scoreRoute } from "@/lib/routing/safety";
 import { isNightTime } from "@/lib/routing/time-of-day";
 import type { RouteMode } from "@/lib/types";
@@ -18,29 +19,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-  if (!token) {
-    return NextResponse.json(
-      { error: "Mapbox token not configured" },
-      { status: 503 }
-    );
+  const [originLng, originLat] = origin.split(",").map(Number);
+  const [destLng, destLat] = destination.split(",").map(Number);
+
+  if ([originLng, originLat, destLng, destLat].some(Number.isNaN)) {
+    return NextResponse.json({ error: "Invalid coordinates" }, { status: 400 });
   }
 
   const night = effectiveIsNightTime(isNightTime(), demo);
   const effectiveMode = night ? "safe" : mode;
 
-  const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${origin};${destination}?alternatives=true&geometries=geojson&overview=full&steps=true&access_token=${token}`;
-
   try {
-    const res = await fetch(url);
-    const data = await res.json();
+    const routes = await fetchWalkingRoutes(originLng, originLat, destLng, destLat);
 
-    if (!data.routes?.length) {
-      return NextResponse.json({ error: "No route found" }, { status: 404 });
-    }
-
-    const fastRoute = pickBestRoute(data.routes, "fast", night);
-    const safeRoute = pickBestRoute(data.routes, "safe", night);
+    const fastRoute = pickBestRoute(routes, "fast", night);
+    const safeRoute = pickBestRoute(routes, "safe", night);
     const selected = effectiveMode === "fast" ? fastRoute : safeRoute;
     const scores = scoreRoute(selected, effectiveMode, night);
 
@@ -75,7 +68,8 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-  } catch {
-    return NextResponse.json({ error: "Routing failed" }, { status: 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Routing failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
