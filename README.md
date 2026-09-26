@@ -1,66 +1,126 @@
 # NaviGo
 
-**A smarter, safer way to get home.**
+A navigation prototype exploring how route choice, time of day, and nearby public places can support young people travelling around London. NaviGo combines a mobile-friendly Next.js interface with Leaflet maps, OpenStreetMap data, OSRM routing, and optional Supabase authentication.
 
-NaviGo is a safety-first navigation web app for young people in London. It offers dual routing (fast vs safe), SOS safe spaces, live TfL data, and hazard reporting — all in a mobile-friendly PWA.
+The current application is a demonstrator. Its “safe” route and lighting scores are street-name heuristics, not measured safety ratings or verified street-lighting data.
 
-## Features
+## What is implemented
 
-- **Adaptive Smart Routing** — Toggle fast or safe paths; auto safe mode at night
-- **SOS Safe Spaces** — Find nearby staffed TfL stations and libraries
-- **TfL Integration** — Live crowding and staffing data
-- **Hazard Reporting** — Report street hazards to local councils
-- **Off-path Alerts** — Get notified when you leave your planned route
-- **PWA** — Install on your phone from the browser
+- **Route comparison:** geocode an origin and destination, request route alternatives, and compare the fastest route with the highest-scoring alternative.
+- **Time-of-day behaviour:** enforce the “safe” selection from 18:00 to 06:00 in the Europe/London time zone.
+- **Interactive map:** display route lines and the browser's geolocation position.
+- **Nearby places:** look up TfL stations and OpenStreetMap libraries, with static London fallbacks if requests fail.
+- **Hazard-report form:** capture a location, category, and description, then store the returned report in the current browser.
+- **Optional authentication:** Supabase email/password sign-up, sign-in, and sign-out; guest access works without Supabase.
+- **Presentation mode:** prefill King's Cross → Camden Town and force daytime route selection.
 
-## Quick Start
+## Quick start
+
+Use **Node.js 22.13 or newer in the 22.x series, or Node.js 24+**, with npm. This accommodates the checked-in Supabase and lint-tool dependencies.
 
 ```bash
+git clone https://github.com/m1-k-k/navigo.git
 cd navigo
-npm install
-cp .env.local.example .env.local
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [localhost:3000/navigate?demo=1](http://localhost:3000/navigate?demo=1) to try the preset journey. No environment file is needed for the guest demo.
 
-No map API key needed — routing uses **OpenStreetMap** (maps) and **OSRM** (walking routes).
+The demo still calls external geocoding, routing, and map services; it is not an offline fixture. Fast and safe selections can be the same route when the service returns only one useful alternative.
 
-## Environment Variables
+## Optional configuration
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_DEMO_MODE` | No | Always-on demo mode (`true` / `false`) |
-| `NEXT_PUBLIC_SUPABASE_URL` | No | Supabase project URL (auth) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Supabase anon key |
-| `TFL_APP_ID` | No | TfL API app ID |
-| `TFL_APP_KEY` | No | TfL API app key |
+Create `.env.local` in the repository root if you need any of these settings. There is currently no tracked `.env.local.example` file.
 
-## Dragon's Den Demo
+```dotenv
+NEXT_PUBLIC_DEMO_MODE=true
 
-See [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 3-minute pitch script.
+# Optional Supabase authentication: set both values together.
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
-**Quick demo URL:** `/navigate?demo=1` — pre-fills King's Cross → Camden, forces daytime routing.
+# Optional TfL credentials.
+TFL_APP_ID=
+TFL_APP_KEY=
+```
 
-**Before pitching:** Open `/navigate?demo=1` and confirm routes load. No API keys required.
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_DEMO_MODE` | Set to `true` for presentation behaviour throughout the client; otherwise use `?demo=1` on individual demo pages |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase public anon key; never substitute a service-role key |
+| `TFL_APP_ID`, `TFL_APP_KEY` | Optional credentials read by the server-side TfL client |
 
-## Deploy to Vercel
+Restart the development server after changing configuration.
 
-1. Push to GitHub repo `navigo`
-2. Import project in [Vercel](https://vercel.com) as project name `navigo`
-3. Add environment variables
-4. Deploy
+For Supabase setup, [supabase/migrations/001_initial.sql](supabase/migrations/001_initial.sql) defines profiles, saved routes, hazard reports, row-level policies, and a profile-on-signup trigger. Apply it to your own project if using that schema. The existence of these tables does not mean the current UI persists routes or reports to them: routes use `sessionStorage`, and reports use `localStorage`.
 
-## Tech Stack
+## How routing works
 
-- Next.js 16 + TypeScript
-- Tailwind CSS 4
-- Leaflet + OpenStreetMap (maps)
-- OSRM (walking routes)
-- Nominatim (address search)
-- Supabase (optional auth)
-- Vercel
+1. `/api/geocode` resolves place names through Nominatim.
+2. `/api/route` requests alternatives from the OSRM endpoint configured in [lib/osrm/client.ts](lib/osrm/client.ts).
+3. [lib/routing/safety.ts](lib/routing/safety.ts) chooses the shortest-duration route for “fast”, and scores street-name keywords for “safe”.
+4. The chosen route and alternatives are stored in the browser session and displayed on `/map`.
 
-## License
+The heuristic favours names containing terms such as “road”, “street”, or “avenue”, and penalises terms such as “alley”, “passage”, or “footpath”. The lighting percentage is also derived from that heuristic. Neither value is a measured probability, and a displayed percentage difference does not establish that one route is safer.
 
-Private — NaviGo © 2026
+The OSRM client requests the public service using a `/route/v1/foot` path. The repository does not provide or configure its own pedestrian-routing backend; verify the backend's actual routing profile and returned paths before using them for walking journeys.
+
+## Pages and service boundaries
+
+| Page | Purpose |
+| --- | --- |
+| `/` | Project landing page |
+| `/navigate` | Journey input and route comparison |
+| `/map` | Route display and user-position marker |
+| `/sos` | Nearby stations/libraries, directions links, and a telephone link for emergencies |
+| `/report` | Browser-local hazard reports |
+| `/profile` | Guest or signed-in account view |
+| `/login`, `/signup` | Optional Supabase authentication |
+
+## Current limitations
+
+- **Reporting is local.** The hazard API returns a report object but does not persist or forward it to a council, despite the form's confirmation copy.
+- **Station staffing is assumed.** The TfL adapter sets `staffed: true`; it does not verify opening hours or current staff availability. Library opening hours are not checked.
+- **Crowding is best effort.** The TfL crowding adapter can return no data, and its matching is not a verified station-level occupancy feed.
+- **Off-path alerts are not implemented.** The map watches location, but there is no route-deviation detection or notification delivery.
+- **Saved routes and paid plans are unfinished.** Schema and interface copy exist, but the current journey is kept in the browser session.
+- **The web manifest is present; offline support is not.** There is no service worker or offline map cache.
+
+The SOS page lists places and links to directions; it does not dispatch help or establish that a location is safe.
+
+## Development
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start development server |
+| `npm run lint` | Run ESLint |
+| `npm run build` | Build for production |
+| `npm run start` | Serve the production build |
+
+```text
+app/                       Pages and server API routes
+components/map/            Leaflet map and geolocation display
+components/landing/        Project presentation
+lib/routing/               Route scoring and London time rules
+lib/osrm/                  Routing adapter
+lib/nominatim/             Geocoding adapter
+lib/tfl/                   Station and crowding adapters
+lib/osm/                   Library lookup through Overpass
+lib/supabase/              Optional authentication helpers
+supabase/migrations/       Database schema
+public/manifest.json       Web app manifest
+```
+
+The stack is Next.js 16, React 19, TypeScript, Tailwind CSS 4, Leaflet, and Supabase. There is no automated test suite checked in.
+
+## Deployment and further reading
+
+The application can run on a Next.js-capable host such as Vercel. Use `npm run build`, configure the optional environment variables, and serve the server-rendered application; the API routes require a server runtime.
+
+[DEMO_SCRIPT.md](DEMO_SCRIPT.md) contains the original pitch walkthrough, and [PROJECT_GUIDE.md](PROJECT_GUIDE.md) provides project context. Some presentation claims describe intended features; the implementation and limitations above describe the current repository.
+
+## Licence
+
+© 2026 NaviGo. No licence file is included in this repository.
